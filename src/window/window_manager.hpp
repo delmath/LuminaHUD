@@ -14,7 +14,6 @@ public:
     void pollEvents();
     bool shouldClose();
     bool getWindowSize();
-    void setMousePassthrough(bool passthrough);
 
 private:
     GLFWwindow* m_window;

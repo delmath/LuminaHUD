@@ -12,6 +12,7 @@ public:
     void newFrame();
     void render();
     ImGuiIO& getIO() { return ImGui::GetIO(); }
+    void rebuildFontTexture();
 
 private:
     GLFWwindow* m_window;

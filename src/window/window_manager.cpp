@@ -1,5 +1,4 @@
 #include "window_manager.hpp"
-#include <GLFW/glfw3.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <GLFW/glfw3native.h>
@@ -44,20 +43,17 @@ bool WindowManager::init() {
     Window win = glfwGetX11Window(m_window);
 
     XSetWindowAttributes attrs;
-    attrs.override_redirect = False;
+    attrs.override_redirect = True;
     XChangeWindowAttributes(dpy, win, CWOverrideRedirect, &attrs);
 
-    Atom wm_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
-    Atom type_overlay = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_OVERLAY", False);
-    XChangeProperty(dpy, win, wm_type, XA_ATOM, 32, PropModeReplace, (unsigned char*)&type_overlay, 1);
 
-    Atom wm_state = XInternAtom(dpy, "_NET_WM_STATE", False);
-    Atom state_above = XInternAtom(dpy, "_NET_WM_STATE_ABOVE", False);
-    XChangeProperty(dpy, win, wm_state, XA_ATOM, 32, PropModeReplace, (unsigned char*)&state_above, 1);
+    Atom wm_type = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
+    Atom type_desktop = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DESKTOP", False);
+    XChangeProperty(dpy, win, wm_type, XA_ATOM, 32, PropModeReplace, (unsigned char*)&type_desktop, 1);
 
     XMapWindow(dpy, win);
+    XLowerWindow(dpy, win);
     XFlush(dpy);
-
 
     glfwMakeContextCurrent(m_window);
     glfwSwapInterval(1);
@@ -78,7 +74,8 @@ bool WindowManager::shouldClose() {
 }
 
 bool WindowManager::getWindowSize() {
-    int window_width = -1;
+
+	int window_width = -1;
     int window_height = -1;
     int window_x_pos = 0;
     int window_y_pos = 0;
@@ -114,11 +111,5 @@ bool WindowManager::getWindowSize() {
     m_x_pos = window_x_pos;
     m_y_pos = window_y_pos;
 
-    return true;
-}
-
-void WindowManager::setMousePassthrough(bool passthrough) {
-    if (m_window) {
-        glfwSetWindowAttrib(m_window, GLFW_MOUSE_PASSTHROUGH, passthrough ? GLFW_TRUE : GLFW_FALSE);
-    }
+	return true;
 }

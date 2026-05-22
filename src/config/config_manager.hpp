@@ -3,14 +3,22 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <memory>
 #include <chrono>
 #include <imgui.h>
 
 struct TextBlock {
     std::string text;
     ImVec2 pos;
-    ImVec4 color;
+
+    ImVec4 color = ImVec4(1, 1, 1, 1);
+    ImVec4 hover_color = ImVec4(1, 1, 1, 1);
+
+    ImVec4 bg_color = ImVec4(0, 0, 0, 0);
+    ImVec4 hover_bg_color = ImVec4(0, 0, 0, 0);
+
+    float border_size = 0.0f;
+    ImVec4 border_color = ImVec4(1, 1, 1, 1);
+
     std::string font_name;
     float font_size;
     ImFont* font_ptr = nullptr;
@@ -30,6 +38,15 @@ struct ButtonBlock {
     std::string target_var;
     std::string action;
     float value_modifier = 1.0f;
+
+    ImVec4 color = ImVec4(1, 1, 1, 1);
+    ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1);
+    ImVec4 hover_color = ImVec4(1, 1, 1, 1);
+    ImVec4 hover_bg_color = ImVec4(0.4f, 0.4f, 0.4f, 1);
+
+    float border_size = 0.0f;
+    ImVec4 border_color = ImVec4(1, 1, 1, 1);
+    ImVec4 hover_border_color = ImVec4(1, 1, 1, 1);
 };
 
 class ConfigManager {

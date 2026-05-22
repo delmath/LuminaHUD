@@ -38,7 +38,6 @@ std::string ConfigManager::execBash(const std::string& cmd) {
     std::array<char, 128> buffer;
     std::string result;
 
-    // Utilisation d'un pointeur de fonction standard pour éviter le warning de template
     FILE* pipe_ptr = popen(final_cmd.c_str(), "r");
     if (!pipe_ptr) return "Error exec";
 
@@ -83,10 +82,10 @@ void ConfigManager::parseConfig() {
 
             std::string section = line.substr(1, line.length() - 2);
             if (section.rfind("TextBlock_", 0) == 0) {
-                current_text = { "", ImVec2(0,0), ImVec4(1,1,1,1), "Default", 14.0f, nullptr, false, "", 1.0f, std::chrono::steady_clock::now(), false };
+                current_text = { "", ImVec2(0,0), ImVec4(1,1,1,1), ImVec4(1,1,1,1), ImVec4(0,0,0,0), ImVec4(0,0,0,0), 0.0f, ImVec4(1,1,1,1), "Default", 14.0f, nullptr, false, "", 1.0f, std::chrono::steady_clock::now(), false };
                 is_text = true;
             } else if (section.rfind("ButtonBlock_", 0) == 0) {
-                current_button = { "Button", ImVec2(0,0), ImVec2(0,0), "", "increment", 1.0f };
+                current_button = { "Button", ImVec2(0,0), ImVec2(0,0), "", "increment", 1.0f, ImVec4(1,1,1,1), ImVec4(0.2f,0.2f,0.2f,1), ImVec4(1,1,1,1), ImVec4(0.4f,0.4f,0.4f,1), 0.0f, ImVec4(1,1,1,1) };
                 is_btn = true;
             }
         }
@@ -106,6 +105,23 @@ void ConfigManager::parseConfig() {
                     unsigned int rgba = 0xFFFFFFFF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
                     current_text.color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
                 }
+                else if (key == "BgColor") {
+                    unsigned int rgba = 0x00000000; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_text.bg_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
+                else if (key == "HoverColor") {
+                    unsigned int rgba = 0xFFFFFFFF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_text.hover_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
+                else if (key == "HoverBgColor") {
+                    unsigned int rgba = 0x00000000; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_text.hover_bg_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
+                else if (key == "BorderSize") current_text.border_size = std::stof(value);
+                else if (key == "BorderColor") {
+                    unsigned int rgba = 0xFFFFFFFF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_text.border_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
                 else if (key == "Font") current_text.font_name = value;
                 else if (key == "Size") current_text.font_size = std::stof(value);
             }
@@ -113,14 +129,33 @@ void ConfigManager::parseConfig() {
                 if (key == "LABEL") current_button.label = value;
                 else if (key == "TargetVar") {
                     current_button.target_var = value;
-                    if (m_variables.find(value) == m_variables.end()) {
-                        m_variables[value] = 0.0f;
-                    }
+                    if (m_variables.find(value) == m_variables.end()) m_variables[value] = 0.0f;
                 }
                 else if (key == "Action") current_button.action = value;
                 else if (key == "Modifier") current_button.value_modifier = std::stof(value);
                 else if (key == "Pos") { char c; std::stringstream ss(value); ss >> current_button.pos.x >> c >> current_button.pos.y; }
                 else if (key == "Size") { char c; std::stringstream ss(value); ss >> current_button.size.x >> c >> current_button.size.y; }
+                else if (key == "Color") {
+                    unsigned int rgba = 0xFFFFFFFF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_button.color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
+                else if (key == "BgColor") {
+                    unsigned int rgba = 0x333333FF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_button.bg_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
+                else if (key == "HoverColor") {
+                    unsigned int rgba = 0xFFFFFFFF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_button.hover_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
+                else if (key == "HoverBgColor") {
+                    unsigned int rgba = 0x555555FF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_button.hover_bg_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
+                else if (key == "BorderSize") current_button.border_size = std::stof(value);
+                else if (key == "BorderColor") {
+                    unsigned int rgba = 0xFFFFFFFF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
+                    current_button.border_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                }
             }
         }
     }
@@ -143,23 +178,17 @@ void ConfigManager::updateBashBlocks() {
 
 void ConfigManager::initFonts(ImGuiIO& io, std::vector<TextBlock>& blocks) {
     ImFontConfig config;
-
     std::vector<fs::path> search_paths = {
-        "/usr/share/fonts",
-        "/usr/local/share/fonts",
-        "/host/usr/share/fonts",
-        "/host/usr/local/share/fonts"
+        "/usr/share/fonts", "/usr/local/share/fonts",
+        "/host/usr/share/fonts", "/host/usr/local/share/fonts"
     };
-
     if (const char* home_dir = std::getenv("HOME")) {
         search_paths.push_back(fs::path(home_dir) / ".local" / "share" / "fonts");
         search_paths.push_back(fs::path(home_dir) / ".fonts");
-        search_paths.push_back(fs::path("/host") / home_dir / ".local" / "share" / "fonts");
     }
 
     for (auto& block : blocks) {
         std::string font_key = block.font_name + "_" + std::to_string((int)block.font_size);
-
         auto it = m_loaded_fonts.find(font_key);
         if (it != m_loaded_fonts.end()) {
             block.font_ptr = it->second;
@@ -167,14 +196,12 @@ void ConfigManager::initFonts(ImGuiIO& io, std::vector<TextBlock>& blocks) {
         }
 
         ImFont* new_font = nullptr;
-
         if (block.font_name == "Default") {
             config.SizePixels = block.font_size;
             new_font = io.Fonts->AddFontDefault(&config);
         } else {
             std::string target_filename = block.font_name + ".ttf";
             fs::path found_path = "";
-
             for (const auto& base_path : search_paths) {
                 if (!fs::exists(base_path)) continue;
                 for (const auto& entry : fs::recursive_directory_iterator(base_path, fs::directory_options::skip_permission_denied)) {
@@ -189,12 +216,10 @@ void ConfigManager::initFonts(ImGuiIO& io, std::vector<TextBlock>& blocks) {
             if (!found_path.empty()) {
                 new_font = io.Fonts->AddFontFromFileTTF(found_path.string().c_str(), block.font_size);
             } else {
-                std::cerr << "Warning: Font '" << target_filename << "' not found on PC. Fallback to default.\n";
                 config.SizePixels = block.font_size;
                 new_font = io.Fonts->AddFontDefault(&config);
             }
         }
-
         if (new_font) {
             m_loaded_fonts[font_key] = new_font;
             block.font_ptr = new_font;
@@ -205,5 +230,5 @@ void ConfigManager::initFonts(ImGuiIO& io, std::vector<TextBlock>& blocks) {
 void ConfigManager::createDefaultIniFile() const {
     std::ofstream ofs(m_ini_path);
     if (!ofs) return;
-    ofs << "[TextBlock_0]\nTEXT=Hello World!\nPos=10,10\nColor=FFFFFFFF\nFont=Default\nSize=24.0\n";
+    ofs << "[TextBlock_0]\nTEXT=Hello World!\nPos=10.0,10.0\nColor=FFFFFFFF\nFont=Default\nSize=24.0\n";
 }

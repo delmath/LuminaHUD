@@ -44,3 +44,8 @@ void ImGuiManager::render() {
 
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
+
+void ImGuiManager::rebuildFontTexture() {
+    ImGui_ImplOpenGL3_DestroyDeviceObjects();
+    ImGui_ImplOpenGL3_CreateDeviceObjects();
+}

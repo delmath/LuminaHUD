@@ -1,6 +1,7 @@
 #include <chrono>
 #include <string>
 #include <thread>
+#include <filesystem>
 #include <X11/Xlib.h>
 
 #include "imgui.h"
@@ -8,6 +9,8 @@
 #include "config/config_manager.hpp"
 #include "imgui/imgui_manager.hpp"
 #include "drawSystem/draw_system.hpp"
+
+namespace fs = std::filesystem;
 
 int main() {
     ConfigManager configManager;
@@ -17,7 +20,7 @@ int main() {
 
     configManager.loadAndPrepareConfig(io);
 
-    WindowManager windowManager("Process Window Dashboard");
+    WindowManager windowManager("GhostDash Desktop Widget");
     if (!windowManager.init()) {
         return -1;
     }
@@ -27,9 +30,27 @@ int main() {
     ImGuiManager imGuiManager(window, "/tmp/imgui_trash.ini");
     io = imGuiManager.getIO();
 
+    std::string ini_path = configManager.getIniPath();
+    fs::file_time_type last_write_time;
+
+    if (fs::exists(ini_path)) {
+        last_write_time = fs::last_write_time(ini_path);
+    }
+
     while (!windowManager.shouldClose()) {
         windowManager.pollEvents();
+
+        if (fs::exists(ini_path)) {
+            auto current_write_time = fs::last_write_time(ini_path);
+            if (current_write_time != last_write_time) {
+                last_write_time = current_write_time;
+                configManager.loadAndPrepareConfig(io);
+                imGuiManager.rebuildFontTexture();
+            }
+        }
+
         imGuiManager.newFrame();
+
         configManager.updateBashBlocks();
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -40,19 +61,18 @@ int main() {
             ImGuiWindowFlags_NoBackground |
             ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-        for (const auto& block : configManager.getIDTextBlocks()) {
+        for (const auto& block : configManager.getIDTextBlocks())
             drawTextBlock(block);
-        }
 
-        for (auto& btn : configManager.getButtonBlocks()) {
+        for (auto& btn : configManager.getButtonBlocks())
             drawButtonBlock(btn, configManager.getVariables());
-        }
 
         ImGui::End();
+
         imGuiManager.render();
         windowManager.swapBuffers();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
     }
 
     return 0;
