@@ -13,8 +13,8 @@ void drawTextBlock(const TextBlock& block) {
 
     if (block.font_ptr) ImGui::PushFont(block.font_ptr);
 
-    float pad_x = 12.0f;
-    float pad_y = 8.0f;
+    const float pad_x = 12.0f;
+    const float pad_y = 8.0f;
 
     ImVec2 text_size = ImGui::CalcTextSize(block.text.c_str());
     ImVec2 rect_min = real_pos;
@@ -22,8 +22,8 @@ void drawTextBlock(const TextBlock& block) {
 
     bool is_hovered = ImGui::IsMouseHoveringRect(rect_min, rect_max);
 
-    ImVec4 final_text_color = is_hovered ? block.hover_color : block.color;
-    ImVec4 final_bg_color   = is_hovered ? block.hover_bg_color : block.bg_color;
+    const ImVec4& final_text_color = is_hovered && block.can_be_hover_tx ? block.hover_color : block.color;
+    const ImVec4& final_bg_color   = is_hovered && block.can_be_hover_bg ? block.hover_bg_color : block.bg_color;
 
     if (final_bg_color.w > 0.0f) {
         ImGui::GetWindowDrawList()->AddRectFilled(rect_min, rect_max, ImGui::ColorConvertFloat4ToU32(final_bg_color));
@@ -50,13 +50,20 @@ void drawButtonBlock(ButtonBlock& btn, std::map<std::string, float>& variables) 
         (btn.pos.x / 100.0f) * io.DisplaySize.x,
         (btn.pos.y / 100.0f) * io.DisplaySize.y
     );
+
+    ImVec2 text_size = ImGui::CalcTextSize(btn.label.c_str());
+
+    float padding_x = btn.size.x;
+    float padding_y = btn.size.y;
+
     ImVec2 real_size = ImVec2(
-        (btn.size.x / 100.0f) * io.DisplaySize.x,
-        (btn.size.y / 100.0f) * io.DisplaySize.y
+        text_size.x + (padding_x * 2.0f),
+        text_size.y + (padding_y * 2.0f)
     );
 
     ImGui::SetCursorScreenPos(real_pos);
 
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padding_x, padding_y));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, btn.border_size);
 
     ImGui::PushStyleColor(ImGuiCol_Text, btn.color);
@@ -66,21 +73,23 @@ void drawButtonBlock(ButtonBlock& btn, std::map<std::string, float>& variables) 
     ImGui::PushStyleColor(ImGuiCol_Border, btn.border_color);
 
     if (ImGui::Button(btn.label.c_str(), real_size)) {
-        if (btn.action == "increment" && (btn.has_border && variables[btn.target_var] < btn.border)) {
-        	if (variables[btn.target_var] + btn.value_modifier <= btn.border)
-            	variables[btn.target_var] += btn.value_modifier;
-        	else
-        		variables[btn.target_var] = btn.border;
-        } else if (btn.action == "decrement" && (btn.has_border && variables[btn.target_var] > btn.border)) {
-       	if (variables[btn.target_var] - btn.value_modifier >= btn.border)
-           	variables[btn.target_var] -= btn.value_modifier;
-       	else
-       		variables[btn.target_var] = btn.border;
+        float& target = variables[btn.target_var];
+
+        if (btn.action == "increment" && btn.has_border && target < btn.border) {
+            if (target + btn.value_modifier <= btn.border)
+                target += btn.value_modifier;
+            else
+                target = btn.border;
+        } else if (btn.action == "decrement" && btn.has_border && target > btn.border) {
+            if (target - btn.value_modifier >= btn.border)
+                target -= btn.value_modifier;
+            else
+                target = btn.border;
         } else if (btn.action == "set") {
-        	variables[btn.target_var] = btn.value_modifier;
+            target = btn.value_modifier;
         }
     }
 
     ImGui::PopStyleColor(5);
-    ImGui::PopStyleVar(1);
+    ImGui::PopStyleVar(2);
 }

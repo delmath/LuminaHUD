@@ -20,6 +20,9 @@ struct TextBlock {
     float border_size = 0.0f;
     ImVec4 border_color = ImVec4(1, 1, 1, 1);
 
+    bool   can_be_hover_tx = false;
+    bool   can_be_hover_bg = false;
+
     std::string font_name;
     float font_size;
     ImFont* font_ptr = nullptr;
@@ -47,6 +50,8 @@ struct ButtonBlock {
     ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1);
     ImVec4 hover_color = ImVec4(1, 1, 1, 1);
     ImVec4 hover_bg_color = ImVec4(0.4f, 0.4f, 0.4f, 1);
+    bool   can_be_hover_tx = false;
+    bool   can_be_hover_bg = false;
 
     float border_size = 0.0f;
     ImVec4 border_color = ImVec4(1, 1, 1, 1);

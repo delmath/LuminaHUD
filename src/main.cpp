@@ -37,20 +37,25 @@ int main() {
         last_write_time = fs::last_write_time(ini_path);
     }
 
+    auto last_file_check = std::chrono::steady_clock::now();
+
     while (!windowManager.shouldClose()) {
         windowManager.pollEvents();
 
-        if (fs::exists(ini_path)) {
-            auto current_write_time = fs::last_write_time(ini_path);
-            if (current_write_time != last_write_time) {
-                last_write_time = current_write_time;
-                configManager.loadAndPrepareConfig(io);
-                imGuiManager.rebuildFontTexture();
+        auto now = std::chrono::steady_clock::now();
+        if (now - last_file_check >= std::chrono::seconds(1)) {
+            last_file_check = now;
+            if (fs::exists(ini_path)) {
+                auto current_write_time = fs::last_write_time(ini_path);
+                if (current_write_time != last_write_time) {
+                    last_write_time = current_write_time;
+                    configManager.loadAndPrepareConfig(io);
+                    imGuiManager.rebuildFontTexture();
+                }
             }
         }
 
         imGuiManager.newFrame();
-
         configManager.updateBashBlocks();
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));

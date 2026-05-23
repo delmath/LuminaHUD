@@ -25,26 +25,31 @@ ConfigManager::ConfigManager() {
 
 std::string ConfigManager::execBash(const std::string& cmd) {
     std::string final_cmd = cmd;
+
     for (const auto& [var_name, var_val] : m_variables) {
         std::string placeholder = "$" + var_name;
         size_t pos = final_cmd.find(placeholder);
-        while (pos != std::string::npos) {
-            std::string val_str = std::to_string((int)var_val);
-            final_cmd.replace(pos, placeholder.length(), val_str);
-            pos = final_cmd.find(placeholder, pos + val_str.length());
+        if (pos != std::string::npos) {
+            std::string val_str = std::to_string(static_cast<int>(var_val));
+            while (pos != std::string::npos) {
+                final_cmd.replace(pos, placeholder.length(), val_str);
+                pos = final_cmd.find(placeholder, pos + val_str.length());
+            }
         }
     }
 
-    std::array<char, 128> buffer;
+    std::array<char, 256> buffer;
     std::string result;
+    result.reserve(512);
 
     FILE* pipe_ptr = popen(final_cmd.c_str(), "r");
     if (!pipe_ptr) return "Error exec";
 
     std::unique_ptr<FILE, int(*)(FILE*)> pipe(pipe_ptr, pclose);
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        result += buffer.data();
+        result.append(buffer.data());
     }
+
     if (!result.empty() && result.back() == '\n') result.pop_back();
     return result;
 }
@@ -77,7 +82,7 @@ void ConfigManager::parseConfig() {
 
         if (line.front() == '[' && line.back() == ']') {
             if (is_text) m_text_blocks.push_back(std::move(current_text));
-            if (is_btn) m_button_blocks.push_back(current_button);
+            if (is_btn) m_button_blocks.push_back(std::move(current_button));
             is_text = false; is_btn = false;
 
             std::string section = line.substr(1, line.length() - 2);
@@ -85,7 +90,7 @@ void ConfigManager::parseConfig() {
                 current_text = TextBlock();
                 is_text = true;
             } else if (section.rfind("ButtonBlock_", 0) == 0) {
-                current_button = { "Button", ImVec2(0,0), ImVec2(0,0), "", "increment", 1.0f, false, 0.0f, ImVec4(1,1,1,1), ImVec4(0.2f,0.2f,0.2f,1), ImVec4(1,1,1,1), ImVec4(0.4f,0.4f,0.4f,1), 0.0f, ImVec4(1,1,1,1) };
+                current_button = { "Button", ImVec2(0,0), ImVec2(0,0), "", "increment", 1.0f, false, 0.0f, ImVec4(1,1,1,1), ImVec4(0.2f,0.2f,0.2f,1), ImVec4(1,1,1,1), ImVec4(0.4f,0.4f,0.4f,1), false, false, 0.0f, ImVec4(1,1,1,1) };
                 is_btn = true;
             }
         }
@@ -108,10 +113,12 @@ void ConfigManager::parseConfig() {
                 else if (key == "BgColor") {
                     unsigned int rgba = 0x00000000; std::stringstream ss; ss << std::hex << value; ss >> rgba;
                     current_text.bg_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                    current_text.can_be_hover_bg = true;
                 }
                 else if (key == "HoverColor") {
                     unsigned int rgba = 0xFFFFFFFF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
                     current_text.hover_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                    current_text.can_be_hover_tx = true;
                 }
                 else if (key == "HoverBgColor") {
                     unsigned int rgba = 0x00000000; std::stringstream ss; ss << std::hex << value; ss >> rgba;
@@ -143,10 +150,12 @@ void ConfigManager::parseConfig() {
                 else if (key == "BgColor") {
                     unsigned int rgba = 0x333333FF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
                     current_button.bg_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                    current_text.can_be_hover_bg = true;
                 }
                 else if (key == "HoverColor") {
                     unsigned int rgba = 0xFFFFFFFF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
                     current_button.hover_color = ImVec4(((rgba >> 24) & 0xFF)/255.0f, ((rgba >> 16) & 0xFF)/255.0f, ((rgba >> 8) & 0xFF)/255.0f, (rgba & 0xFF)/255.0f);
+                    current_text.can_be_hover_tx = true;
                 }
                 else if (key == "HoverBgColor") {
                     unsigned int rgba = 0x555555FF; std::stringstream ss; ss << std::hex << value; ss >> rgba;
@@ -161,15 +170,17 @@ void ConfigManager::parseConfig() {
         }
     }
     if (is_text) m_text_blocks.push_back(std::move(current_text));
-    if (is_btn) m_button_blocks.push_back(current_button);
+    if (is_btn) m_button_blocks.push_back(std::move(current_button));
 }
 
 void ConfigManager::updateBashBlocks() {
     auto now = std::chrono::steady_clock::now();
 
     for (auto& block : m_text_blocks) {
+        if (!block.is_bash) continue;
+
         bool holds_variable = false;
-        if (block.is_bash) {
+        if (block.bash_command.find('$') != std::string::npos) {
             for (const auto& [var_name, var_val] : m_variables) {
                 if (block.bash_command.find("$" + var_name) != std::string::npos) {
                     holds_variable = true;
@@ -203,8 +214,8 @@ void ConfigManager::updateBashBlocks() {
         std::chrono::duration<float> elapsed = now - block.last_refresh;
         if (elapsed.count() >= block.refresh_rate_seconds) {
             block.is_running = true;
-            block.future_result = std::async(std::launch::async, [this, cmd = block.bash_command]() {
-                return this->execBash(cmd);
+            block.future_result = std::async(std::launch::async, [this, &cmd = block.bash_command]() {
+                return this->execBash(cmd); // Capture par référence de cmd pour éviter la copie
             });
         }
     }
