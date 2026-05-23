@@ -11,11 +11,11 @@ namespace fs = std::filesystem;
 
 ConfigManager::ConfigManager() {
     if (const char* home_dir = std::getenv("HOME")) {
-        fs::path config_dir = fs::path(home_dir) / ".config" / "process_window";
+        fs::path config_dir = fs::path(home_dir) / ".config" / "LuminaHUD";
         fs::create_directories(config_dir);
-        m_ini_path = (config_dir / "process_window_layout.ini").string();
+        m_ini_path = (config_dir / "config").string();
     } else {
-        m_ini_path = "process_window_layout.ini";
+        m_ini_path = "config";
     }
 
     if (!fs::exists(m_ini_path)) {
@@ -215,7 +215,7 @@ void ConfigManager::updateBashBlocks() {
         if (elapsed.count() >= block.refresh_rate_seconds) {
             block.is_running = true;
             block.future_result = std::async(std::launch::async, [this, &cmd = block.bash_command]() {
-                return this->execBash(cmd); // Capture par référence de cmd pour éviter la copie
+                return this->execBash(cmd);
             });
         }
     }

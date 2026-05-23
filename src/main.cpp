@@ -5,10 +5,10 @@
 #include <X11/Xlib.h>
 
 #include "imgui.h"
-#include "window/window_manager.hpp"
-#include "config/config_manager.hpp"
-#include "imgui/imgui_manager.hpp"
-#include "drawSystem/draw_system.hpp"
+#include "window_manager.hpp"
+#include "config_manager.hpp"
+#include "imgui_manager.hpp"
+#include "draw_system.hpp"
 
 namespace fs = std::filesystem;
 

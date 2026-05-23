@@ -1,4 +1,4 @@
-#include "config/config_manager.hpp"
+#include "config_manager.hpp"
 #include <imgui.h>
 #include <map>
 #include <string>
