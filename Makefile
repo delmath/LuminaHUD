@@ -24,11 +24,10 @@ ifeq ($(MAKECMDGOALS), fast)
 	CFLAGS += -O3
 endif
 
-LDFLAGS  = -lglfw -lGL -lX11 -limgui -lpthread -ldl
+LDFLAGS  = -lglfw -lGL -lX11 -lpthread -ldl
 
-INCLUDES = -I /usr/include \
-           -I /usr/include/imgui \
-           -I /usr/include/imgui/backends \
+INCLUDES = -I lib/imgui \
+           -I lib/imgui/backends \
            -I src \
            -I src/imgui \
            -I src/window \
@@ -39,8 +38,14 @@ SRC_FILES = src/main.cpp \
             src/imgui/imgui_manager.cpp \
             src/window/window_manager.cpp \
             src/drawSystem/draw_system.cpp \
-            src/config/config_manager.cpp
-
+            src/config/config_manager.cpp \
+            lib/imgui/imgui.cpp \
+            lib/imgui/imgui_demo.cpp \
+            lib/imgui/imgui_draw.cpp \
+            lib/imgui/imgui_tables.cpp \
+            lib/imgui/imgui_widgets.cpp \
+            lib/imgui/backends/imgui_impl_glfw.cpp \
+            lib/imgui/backends/imgui_impl_opengl3.cpp
 ifeq ($(MAKECMDGOALS), dev)
 	SRC_FILES += lib/imgui/backends/imgui_impl_glfw.cpp \
 	             lib/imgui/backends/imgui_impl_opengl3.cpp
