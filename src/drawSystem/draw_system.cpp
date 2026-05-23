@@ -66,10 +66,18 @@ void drawButtonBlock(ButtonBlock& btn, std::map<std::string, float>& variables) 
     ImGui::PushStyleColor(ImGuiCol_Border, btn.border_color);
 
     if (ImGui::Button(btn.label.c_str(), real_size)) {
-        if (btn.action == "increment") {
-            variables[btn.target_var] += btn.value_modifier;
-        } else if (btn.action == "decrement") {
-            variables[btn.target_var] -= btn.value_modifier;
+        if (btn.action == "increment" && (btn.has_border && variables[btn.target_var] < btn.border)) {
+        	if (variables[btn.target_var] + btn.value_modifier <= btn.border)
+            	variables[btn.target_var] += btn.value_modifier;
+        	else
+        		variables[btn.target_var] = btn.border;
+        } else if (btn.action == "decrement" && (btn.has_border && variables[btn.target_var] > btn.border)) {
+       	if (variables[btn.target_var] - btn.value_modifier >= btn.border)
+           	variables[btn.target_var] -= btn.value_modifier;
+       	else
+       		variables[btn.target_var] = btn.border;
+        } else if (btn.action == "set") {
+        	variables[btn.target_var] = btn.value_modifier;
         }
     }
 

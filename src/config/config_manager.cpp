@@ -76,16 +76,16 @@ void ConfigManager::parseConfig() {
         if (line.empty()) continue;
 
         if (line.front() == '[' && line.back() == ']') {
-            if (is_text) m_text_blocks.push_back(current_text);
+            if (is_text) m_text_blocks.push_back(std::move(current_text));
             if (is_btn) m_button_blocks.push_back(current_button);
             is_text = false; is_btn = false;
 
             std::string section = line.substr(1, line.length() - 2);
             if (section.rfind("TextBlock_", 0) == 0) {
-                current_text = { "", ImVec2(0,0), ImVec4(1,1,1,1), ImVec4(1,1,1,1), ImVec4(0,0,0,0), ImVec4(0,0,0,0), 0.0f, ImVec4(1,1,1,1), "Default", 14.0f, nullptr, false, "", 1.0f, std::chrono::steady_clock::now(), false };
+                current_text = TextBlock();
                 is_text = true;
             } else if (section.rfind("ButtonBlock_", 0) == 0) {
-                current_button = { "Button", ImVec2(0,0), ImVec2(0,0), "", "increment", 1.0f, ImVec4(1,1,1,1), ImVec4(0.2f,0.2f,0.2f,1), ImVec4(1,1,1,1), ImVec4(0.4f,0.4f,0.4f,1), 0.0f, ImVec4(1,1,1,1) };
+                current_button = { "Button", ImVec2(0,0), ImVec2(0,0), "", "increment", 1.0f, false, 0.0f, ImVec4(1,1,1,1), ImVec4(0.2f,0.2f,0.2f,1), ImVec4(1,1,1,1), ImVec4(0.4f,0.4f,0.4f,1), 0.0f, ImVec4(1,1,1,1) };
                 is_btn = true;
             }
         }
@@ -132,6 +132,7 @@ void ConfigManager::parseConfig() {
                     if (m_variables.find(value) == m_variables.end()) m_variables[value] = 0.0f;
                 }
                 else if (key == "Action") current_button.action = value;
+                else if (key == "Border") { current_button.border = std::stof(value); current_button.has_border = true;}
                 else if (key == "Modifier") current_button.value_modifier = std::stof(value);
                 else if (key == "Pos") { char c; std::stringstream ss(value); ss >> current_button.pos.x >> c >> current_button.pos.y; }
                 else if (key == "Size") { char c; std::stringstream ss(value); ss >> current_button.size.x >> c >> current_button.size.y; }
@@ -159,19 +160,52 @@ void ConfigManager::parseConfig() {
             }
         }
     }
-    if (is_text) m_text_blocks.push_back(current_text);
+    if (is_text) m_text_blocks.push_back(std::move(current_text));
     if (is_btn) m_button_blocks.push_back(current_button);
 }
 
 void ConfigManager::updateBashBlocks() {
     auto now = std::chrono::steady_clock::now();
-    for (auto& block : m_text_blocks) {
-        if (!block.is_bash) continue;
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - block.last_refresh).count() / 1000.0f;
-        if (elapsed >= block.refresh_rate_seconds || block.text.empty()) {
-            block.text = execBash(block.bash_command);
-            block.last_refresh = now;
+    for (auto& block : m_text_blocks) {
+        bool holds_variable = false;
+        if (block.is_bash) {
+            for (const auto& [var_name, var_val] : m_variables) {
+                if (block.bash_command.find("$" + var_name) != std::string::npos) {
+                    holds_variable = true;
+                    break;
+                }
+            }
+        }
+
+        if (holds_variable) {
+            std::chrono::duration<float> elapsed = now - block.last_refresh;
+            if (elapsed.count() >= block.refresh_rate_seconds || block.text.empty()) {
+                if (block.is_running) {
+                    if (block.future_result.valid()) block.future_result.wait();
+                    block.is_running = false;
+                }
+                block.text = this->execBash(block.bash_command);
+                block.last_refresh = now;
+            }
+            continue;
+        }
+
+        if (block.is_running) {
+            if (block.future_result.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+                block.text = block.future_result.get();
+                block.is_running = false;
+                block.last_refresh = now;
+            }
+            continue;
+        }
+
+        std::chrono::duration<float> elapsed = now - block.last_refresh;
+        if (elapsed.count() >= block.refresh_rate_seconds) {
+            block.is_running = true;
+            block.future_result = std::async(std::launch::async, [this, cmd = block.bash_command]() {
+                return this->execBash(cmd);
+            });
         }
     }
 }

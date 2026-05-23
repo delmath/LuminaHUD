@@ -1,5 +1,6 @@
 #pragma once
 
+#include <future>
 #include <string>
 #include <vector>
 #include <map>
@@ -27,6 +28,7 @@ struct TextBlock {
     std::string bash_command;
     float refresh_rate_seconds = 1.0f;
 
+    std::future<std::string> future_result;
     std::chrono::steady_clock::time_point last_refresh;
     bool is_running = false;
 };
@@ -38,6 +40,8 @@ struct ButtonBlock {
     std::string target_var;
     std::string action;
     float value_modifier = 1.0f;
+    bool  has_border = false;
+    float border = 0.0f;
 
     ImVec4 color = ImVec4(1, 1, 1, 1);
     ImVec4 bg_color = ImVec4(0.2f, 0.2f, 0.2f, 1);
