@@ -28,6 +28,7 @@ list(REMOVE_DUPLICATES MY_INCLUDE_DIRS)
 include_directories(
     ${IMGUI_DIR}
     ${IMGUI_BUILD_DIR}
+    ${CMAKE_SOURCE_DIR}/lib/stb
     ${CMAKE_SOURCE_DIR}/src
     ${MY_INCLUDE_DIRS}
 )

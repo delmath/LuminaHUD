@@ -8,12 +8,16 @@ public:
     WindowManager(const char* title);
     ~WindowManager();
 
-    bool init();
+    bool init(int monitor);
+    void applyMonitor(int monitor);
+    int getMonitorCount() const;
+    bool consumeMonitorChange();
     GLFWwindow* getWindow() const { return m_window; }
     void swapBuffers();
     void pollEvents();
+    void waitEvents(double timeout_seconds);
     bool shouldClose();
-    bool getWindowSize();
+    bool getWindowSize(int monitor);
 
 private:
     GLFWwindow* m_window;
@@ -22,5 +26,6 @@ private:
     const char* m_title;
     int m_x_pos;
     int m_y_pos;
+    bool m_glfw_ready;
 
 };

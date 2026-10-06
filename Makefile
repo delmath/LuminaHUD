@@ -18,15 +18,12 @@ PREFIX   = /usr/local
 
 CC       = c++
 DEPFLAGS = -MMD -MP
-CFLAGS   = $(DEPFLAGS) -Wall -Wextra -std=c++17
-
-ifeq ($(MAKECMDGOALS), fast)
-	CFLAGS += -O3
-endif
+CFLAGS   = $(DEPFLAGS) -Wall -Wextra -std=c++17 -O2
 
 LDFLAGS  = -lglfw -lGL -lX11 -lpthread -ldl
 
 INCLUDES = -I lib/imgui \
+           -I lib/stb \
            -I lib/imgui/backends \
            -I src \
            -I src/imgui \

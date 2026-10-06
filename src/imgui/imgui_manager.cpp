@@ -3,7 +3,7 @@
 #include "imgui_impl_opengl3.h"
 #include <GL/gl.h>
 
-ImGuiManager::ImGuiManager(GLFWwindow* window, const std::string& ini_filepath)
+ImGuiManager::ImGuiManager(GLFWwindow* window)
     : m_window(window) {
     IMGUI_CHECKVERSION();
 
@@ -11,7 +11,7 @@ ImGuiManager::ImGuiManager(GLFWwindow* window, const std::string& ini_filepath)
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    io.IniFilename = ini_filepath.c_str();
+    io.IniFilename = nullptr;
 
     ImGui_ImplGlfw_InitForOpenGL(m_window, true);
     ImGui_ImplOpenGL3_Init("#version 130");

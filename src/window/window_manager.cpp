@@ -4,8 +4,17 @@
 #include <GLFW/glfw3native.h>
 #include <iostream>
 
+static bool s_monitors_changed = false;
+
+static void onMonitorEvent(GLFWmonitor*, int) {
+    s_monitors_changed = true;
+}
+
 WindowManager::WindowManager(const char* title)
-    : m_title(title), m_window(nullptr) {
+    : m_window(nullptr), m_title(title) {
+    m_glfw_ready = glfwInit();
+    if (m_glfw_ready)
+        glfwSetMonitorCallback(onMonitorEvent);
 }
 
 WindowManager::~WindowManager() {
@@ -15,14 +24,14 @@ WindowManager::~WindowManager() {
     glfwTerminate();
 }
 
-bool WindowManager::init() {
-    if (!getWindowSize())
-        return false;
-
-    if (!glfwInit()) {
+bool WindowManager::init(int monitor) {
+    if (!m_glfw_ready) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return false;
     }
+
+    if (!getWindowSize(monitor))
+        return false;
 
     glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
     glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
@@ -69,37 +78,65 @@ void WindowManager::pollEvents() {
     glfwPollEvents();
 }
 
+void WindowManager::waitEvents(double timeout_seconds) {
+    glfwWaitEventsTimeout(timeout_seconds);
+}
+
 bool WindowManager::shouldClose() {
     return glfwWindowShouldClose(m_window);
 }
 
-bool WindowManager::getWindowSize() {
+int WindowManager::getMonitorCount() const {
+    int count = 0;
+    if (m_glfw_ready)
+        glfwGetMonitors(&count);
+    return count;
+}
 
-	int window_width = -1;
+bool WindowManager::consumeMonitorChange() {
+    bool changed = s_monitors_changed;
+    s_monitors_changed = false;
+    return changed;
+}
+
+void WindowManager::applyMonitor(int monitor) {
+    int previous_width = m_width, previous_height = m_height;
+    int previous_x = m_x_pos, previous_y = m_y_pos;
+
+    getWindowSize(monitor);
+
+    if (m_x_pos != previous_x || m_y_pos != previous_y)
+        glfwSetWindowPos(m_window, m_x_pos, m_y_pos);
+    if (m_width != previous_width || m_height != previous_height)
+        glfwSetWindowSize(m_window, m_width, m_height);
+}
+
+// monitor is a GLFW monitor index, -2 for the primary one, -1 for the whole X screen
+bool WindowManager::getWindowSize(int monitor) {
+
+    int window_width = -1;
     int window_height = -1;
     int window_x_pos = 0;
     int window_y_pos = 0;
 
-    GLFWmonitor* primary_monitor = glfwGetPrimaryMonitor();
-    if (primary_monitor) {
-        const GLFWvidmode* mode = glfwGetVideoMode(primary_monitor);
-        if (mode) {
-            window_width = mode->width;
-            window_height = mode->height;
-            window_x_pos = 0;
-            window_y_pos = 0;
-        }
+    GLFWmonitor* target_monitor = nullptr;
+    if (monitor != -1) {
+        int count = 0;
+        GLFWmonitor** monitors = glfwGetMonitors(&count);
+        target_monitor = (monitor >= 0 && monitor < count) ? monitors[monitor] : glfwGetPrimaryMonitor();
+    }
+
+    const GLFWvidmode* mode = target_monitor ? glfwGetVideoMode(target_monitor) : nullptr;
+    if (mode) {
+        window_width = mode->width;
+        window_height = mode->height;
+        glfwGetMonitorPos(target_monitor, &window_x_pos, &window_y_pos);
     } else {
-        Display* dpy = XOpenDisplay(NULL);
-        if (dpy) {
-            Screen* screen = DefaultScreenOfDisplay(dpy);
-            if (screen) {
-                window_width = screen->width;
-                window_height = screen->height;
-                window_x_pos = 0;
-                window_y_pos = 0;
-            }
-            XCloseDisplay(dpy);
+        Display* dpy = glfwGetX11Display();
+        Screen* screen = dpy ? DefaultScreenOfDisplay(dpy) : nullptr;
+        if (screen) {
+            window_width = screen->width;
+            window_height = screen->height;
         }
     }
 
@@ -111,5 +148,5 @@ bool WindowManager::getWindowSize() {
     m_x_pos = window_x_pos;
     m_y_pos = window_y_pos;
 
-	return true;
+    return true;
 }

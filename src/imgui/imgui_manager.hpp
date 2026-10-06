@@ -2,11 +2,10 @@
 
 #include "imgui.h"
 #include <GLFW/glfw3.h>
-#include <string>
 
 class ImGuiManager {
 public:
-    ImGuiManager(GLFWwindow* window, const std::string& ini_filepath);
+    ImGuiManager(GLFWwindow* window);
     ~ImGuiManager();
 
     void newFrame();
