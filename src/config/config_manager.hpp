@@ -53,6 +53,14 @@ struct TextBlock : Block, BashSource {
     bool   can_be_hover_tx = false;
     bool   can_be_hover_bg = false;
 
+    float glow_size = 0.0f;
+    ImVec4 glow_color = ImVec4(0, 0, 0, 0);
+
+    // Text animation: the frames loop, then the block stays empty for loop_pause seconds
+    std::vector<std::string> frames;
+    float frame_time = 0.15f;
+    float loop_pause = 0.0f;
+
     std::string font_name = "Default";
     float font_size = 13.0f;
     ImFont* font_ptr = nullptr;
@@ -165,6 +173,7 @@ private:
 
     std::shared_ptr<std::atomic<bool>> m_exec_finished;
     std::chrono::steady_clock::time_point m_last_exec;
+    std::chrono::steady_clock::time_point m_animation_start = std::chrono::steady_clock::now();
 
     void parseConfig();
     std::vector<Section> readSections();
@@ -187,6 +196,7 @@ private:
     std::string resolveOperand(const std::string& operand) const;
 
     void updateBashSource(const Block& block, BashSource& src, std::chrono::steady_clock::time_point now);
+    float animationTime(const TextBlock& block, std::chrono::steady_clock::time_point now) const;
     void onVariableChanged(const std::string& name);
 
     void initFonts(ImGuiIO& io);

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <cstdio>
 #include <cctype>
+#include <cmath>
 #include <array>
 #include <algorithm>
 #include <memory>
@@ -118,7 +119,7 @@ bool usesVariable(const std::string& cmd, const std::string& name) {
 
 // Keys holding free text, where a leading '@' is not a theme reference
 bool isRawKey(const std::string& key) {
-    return key == "TEXT" || key == "BASH" || key == "LABEL" || key == "Exec" || key == "Path";
+    return key == "TEXT" || key == "FRAMES" || key == "BASH" || key == "LABEL" || key == "Exec" || key == "Path";
 }
 
 }
@@ -354,12 +355,26 @@ ConfigManager::Apply ConfigManager::applyText(TextBlock& block, const std::strin
 
     bool ok = true;
     if (key == "TEXT") block.text = value;
+    else if (key == "FRAMES") {
+        // Frames are separated by '|'; inside a frame \n is a line break and \| a literal '|'
+        block.frames.assign(1, "");
+        for (size_t i = 0; i < value.length(); ++i) {
+            bool escape = value[i] == '\\' && i + 1 < value.length() && (value[i + 1] == 'n' || value[i + 1] == '|');
+            if (escape) block.frames.back() += value[++i] == 'n' ? '\n' : '|';
+            else if (value[i] == '|') block.frames.emplace_back();
+            else block.frames.back() += value[i];
+        }
+    }
+    else if (key == "FrameTime") { ok = parseFloat(value, block.frame_time) && block.frame_time > 0.0f; if (!ok) block.frame_time = 0.15f; }
+    else if (key == "LoopPause") ok = parseFloat(value, block.loop_pause);
     else if (key == "Color") ok = parseColor(value, block.color);
     else if (key == "BgColor") ok = parseColor(value, block.bg_color);
     else if (key == "HoverColor") { ok = parseColor(value, block.hover_color); block.can_be_hover_tx = ok; }
     else if (key == "HoverBgColor") { ok = parseColor(value, block.hover_bg_color); block.can_be_hover_bg = ok; }
     else if (key == "BorderSize") ok = parseFloat(value, block.border_size);
     else if (key == "BorderColor") ok = parseColor(value, block.border_color);
+    else if (key == "GlowSize") ok = parseFloat(value, block.glow_size);
+    else if (key == "GlowColor") ok = parseColor(value, block.glow_color);
     else if (key == "Font") block.font_name = value;
     else if (key == "Size") ok = parseFloat(value, block.font_size);
     else return Apply::Unknown;
@@ -562,6 +577,20 @@ void ConfigManager::updateBashBlocks() {
 
     for (auto& block : m_text_blocks) updateBashSource(block, block, now);
     for (auto& bar : m_bar_blocks) updateBashSource(bar, bar, now);
+
+    for (auto& block : m_text_blocks) {
+        if (block.frames.empty()) continue;
+
+        size_t index = static_cast<size_t>(animationTime(block, now) / block.frame_time);
+        block.text = index < block.frames.size() ? block.frames[index] : "";
+    }
+}
+
+// Seconds elapsed in the current loop of the block animation
+float ConfigManager::animationTime(const TextBlock& block, std::chrono::steady_clock::time_point now) const {
+    float loop = block.frames.size() * block.frame_time + std::max(block.loop_pause, 0.0f);
+    std::chrono::duration<double> elapsed = now - m_animation_start;
+    return static_cast<float>(std::fmod(elapsed.count(), static_cast<double>(loop)));
 }
 
 float ConfigManager::secondsUntilNextRefresh(float max_wait) const {
@@ -583,6 +612,18 @@ float ConfigManager::secondsUntilNextRefresh(float max_wait) const {
 
     for (const auto& block : m_text_blocks) consider(block, block);
     for (const auto& bar : m_bar_blocks) consider(bar, bar);
+
+    for (const auto& block : m_text_blocks) {
+        if (block.frames.empty() || !evaluate(block.when)) continue;
+
+        // Next frame change, or the end of the pause once the last frame is over
+        float time = animationTime(block, now);
+        float frames_end = block.frames.size() * block.frame_time;
+        float next = time < frames_end
+            ? block.frame_time - std::fmod(time, block.frame_time)
+            : frames_end + std::max(block.loop_pause, 0.0f) - time;
+        wait = std::min(wait, next);
+    }
 
     if (now - m_last_exec < std::chrono::seconds(1)) wait = std::min(wait, 0.05f);
 

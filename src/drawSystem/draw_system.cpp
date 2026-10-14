@@ -1,5 +1,7 @@
 #include "draw_system.hpp"
 #include <imgui.h>
+#include <imgui_internal.h>
+#include <cmath>
 #include <GL/gl.h>
 #include <algorithm>
 #include <map>
@@ -62,7 +64,30 @@ void drawTextBlock(const TextBlock& block) {
         );
     }
 
-    ImGui::SetCursorScreenPos(ImVec2(rect_min.x + pad_x, rect_min.y + pad_y));
+    ImVec2 text_pos = ImVec2(rect_min.x + pad_x, rect_min.y + pad_y);
+
+    if (block.glow_size > 0.0f && block.glow_color.w > 0.0f) {
+        // Soft halo: the text is stamped on rings around its position, the stamps add up near the glyphs
+        const int directions = 12;
+        const int rings = ImClamp((int)(block.glow_size / 1.5f), 1, 8);
+
+        ImVec4 stamp_color = block.glow_color;
+        stamp_color.w = block.glow_color.w / (rings * 2.0f);
+        ImU32 stamp = ImGui::ColorConvertFloat4ToU32(stamp_color);
+
+        for (int ring = 1; ring <= rings; ++ring) {
+            float radius = block.glow_size * ring / rings;
+            for (int i = 0; i < directions; ++i) {
+                float angle = (i + ring * 0.5f) * (2.0f * IM_PI / directions);
+                ImGui::GetWindowDrawList()->AddText(
+                    ImVec2(text_pos.x + cosf(angle) * radius, text_pos.y + sinf(angle) * radius),
+                    stamp, block.text.c_str()
+                );
+            }
+        }
+    }
+
+    ImGui::SetCursorScreenPos(text_pos);
     ImGui::TextColored(final_text_color, "%s", block.text.c_str());
 
     if (block.font_ptr) ImGui::PopFont();
